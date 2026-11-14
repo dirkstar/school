@@ -137,7 +137,6 @@ em.ex { color: var(--blue); font-style: normal; font-weight: 500; }
       <div class="row" id="srcChips">
         <button class="chip" data-src="vocab" aria-pressed="false">Vokabeln</button>
         <button class="chip" data-src="verbs" aria-pressed="true">Unregelmäßige Verben</button>
-        <button class="chip" data-src="both" aria-pressed="false">Alles</button>
       </div>
     </div>
     <div class="field" id="unitField">
@@ -148,8 +147,9 @@ em.ex { color: var(--blue); font-style: normal; font-weight: 500; }
       <div class="field">
         <label class="label" for="dirSel">Richtung</label>
         <select id="dirSel">
-          <option value="de-en">Deutsch zuerst, Englisch ist die Antwort</option>
-          <option value="en-de">Englisch zuerst (Verben: Infinitiv, dann Past + Partizip)</option>
+          <option value="de-en"></option>
+          <option value="en-de"></option>
+          <option value="rand">Zufällig</option>
         </select>
       </div>
       <div class="field">
@@ -160,19 +160,7 @@ em.ex { color: var(--blue); font-style: normal; font-weight: 500; }
         </select>
       </div>
     </div>
-        <details id="importBox">
-      <summary>Eigene Vokabeln hinzufügen</summary>
-      <div class="field" style="margin-top:8px">
-        <label class="note" for="vocabIn">Eine Vokabel pro Zeile: <b>englisch = deutsch</b>. Mit einer Zeile wie <b>Unit 2</b> wechselt die Unit. Wird nur auf diesem Gerät gespeichert.</label>
-        <textarea id="vocabIn" spellcheck="false" placeholder="Unit 1&#10;band = Band, Gruppe&#10;Unit 2&#10;..."></textarea>
-        <div class="row">
-          <button class="btn" id="vocabSave" type="button">Speichern</button>
-          <button class="btn ghost" id="vocabClear" type="button">Eigene löschen</button>
-          <span class="note" id="vocabStatus" role="status"></span>
-        </div>
-      </div>
-    </details>
-  </section>
+      </section>
 
   <!-- KARTEN -->
   <section id="tab-cards" class="gsec">
@@ -371,24 +359,26 @@ function matches(input, solution, alt) {
 }
 
 /* ---------- STATE ---------- */
-const S = Object.assign({ src: 'both', units: [1, 2, 3], dir: 'de-en', shuf: '1' }, load('e3state2', {}));
-function persist() { save('e3state2', S); }
-let userVocab = load('e3vocab', []);
-const allVocab = () => VOCAB.concat(userVocab).map(v => ({ t: 'w', en: v.en, de: v.de, unit: v.unit || 1 }));
+const S = Object.assign({ src: 'vocab', units: [1, 2, 3], dir: 'de-en', shuf: '1' }, load('e3state3', {}));
+if (S.src !== 'verbs') S.src = 'vocab';
+function persist() { save('e3state3', S); }
+const allVocab = () => VOCAB.map(v => ({ t: 'w', en: v.en, de: v.de, unit: v.unit || 1 }));
 
 function buildDeck() {
-  let items = [];
-  if (S.src !== 'verbs') items = items.concat(allVocab().filter(v => S.units.includes(v.unit)));
-  if (S.src !== 'vocab') items = items.concat(VERBS);
+  let items = S.src === 'verbs' ? VERBS.slice() : allVocab().filter(v => S.units.includes(v.unit));
+  items = items.map(it => Object.assign({}, it, { d: S.dir === 'rand' ? (Math.random() < 0.5 ? 'de-en' : 'en-de') : S.dir }));
   return S.shuf === '1' ? shuffle(items) : items;
 }
 
+function dirTag(it) {
+  if (it.t === 'w') return 'Vokabel · ' + (it.d === 'de-en' ? 'Deutsch → Englisch' : 'Englisch → Deutsch');
+  return 'Verb · ' + (it.d === 'de-en' ? 'Deutsch → alle Formen' : 'Infinitiv → Past + Participle');
+}
 function view(it) {
-  if (it.t === 'w') {
-    return S.dir === 'de-en' ? { p: it.de, a: it.en, tag: 'Vokabel' } : { p: it.en, a: it.de, tag: 'Vokabel' };
-  }
-  if (S.dir === 'de-en') return { p: it.de, a: `${it.inf} – ${it.past} – ${it.pp}`, tag: 'Unregelmäßiges Verb' };
-  return { p: it.inf, a: `${it.past} – ${it.pp}`, sub: it.de, tag: 'Unregelmäßiges Verb' };
+  const tag = dirTag(it);
+  if (it.t === 'w') return it.d === 'de-en' ? { p: it.de, a: it.en, tag } : { p: it.en, a: it.de, tag };
+  if (it.d === 'de-en') return { p: it.de, a: `${it.inf} – ${it.past} – ${it.pp}`, tag };
+  return { p: it.inf, a: `${it.past} – ${it.pp}`, sub: it.de, tag };
 }
 
 /* ---------- SETTINGS UI ---------- */
@@ -403,6 +393,9 @@ function renderSettings() {
     uc.appendChild(b);
   });
   $('#unitField').hidden = S.src === 'verbs';
+  const o = $('#dirSel').options;
+  o[0].textContent = S.src === 'verbs' ? 'Deutsch → alle drei Formen' : 'Deutsch → Englisch';
+  o[1].textContent = S.src === 'verbs' ? 'Infinitiv → Past Simple + Participle' : 'Englisch → Deutsch';
   $('#dirSel').value = S.dir; $('#shuf').value = S.shuf;
 }
 $$('#srcChips .chip').forEach(b => b.onclick = () => { S.src = b.dataset.src; persist(); renderSettings(); resetAll(); });
@@ -420,18 +413,6 @@ function parseVocab(txt) {
   });
   return out;
 }
-$('#vocabSave').onclick = () => {
-  const list = parseVocab($('#vocabIn').value);
-  if (!list.length) { $('#vocabStatus').textContent = 'Keine Zeile im Format "englisch = deutsch" gefunden.'; return; }
-  userVocab = userVocab.concat(list); save('e3vocab', userVocab);
-  $('#vocabIn').value = ''; $('#vocabStatus').textContent = list.length + ' Vokabeln gespeichert. Gesamt: ' + userVocab.length + '.';
-  renderSettings(); resetAll();
-};
-let clearArmed = false;
-$('#vocabClear').onclick = () => {
-  if (!clearArmed) { clearArmed = true; $('#vocabStatus').textContent = 'Nochmal tippen, um alle eigenen Vokabeln zu löschen.'; setTimeout(() => { clearArmed = false; }, 4000); return; }
-  userVocab = []; save('e3vocab', userVocab); clearArmed = false; $('#vocabStatus').textContent = 'Gelöscht.'; renderSettings(); resetAll();
-};
 
 /* ---------- TABS ---------- */
 let tab = 'cards';
@@ -483,16 +464,16 @@ function writeNext(skip) {
   const it = W.cur;
   let specs;
   if (it.t === 'w') {
-    const q = S.dir === 'de-en' ? it.de : it.en;
-    $('#wTag').textContent = 'Vokabel';
+    const q = it.d === 'de-en' ? it.de : it.en;
+    $('#wTag').textContent = dirTag(it);
     $('#wQ').textContent = q;
-    specs = [{ lab: S.dir === 'de-en' ? 'Englisch' : 'Deutsch', sol: S.dir === 'de-en' ? it.en : it.de, alt: false }];
-  } else if (S.dir === 'de-en') {
-    $('#wTag').textContent = 'Unregelmäßiges Verb';
+    specs = [{ lab: it.d === 'de-en' ? 'Englisch' : 'Deutsch', sol: it.d === 'de-en' ? it.en : it.de, alt: false }];
+  } else if (it.d === 'de-en') {
+    $('#wTag').textContent = dirTag(it);
     $('#wQ').textContent = it.de;
     specs = [{ lab: 'Infinitiv', sol: it.inf, alt: true }, { lab: 'Past Simple', sol: it.past, alt: true }, { lab: 'Past Participle', sol: it.pp, alt: true }];
   } else {
-    $('#wTag').textContent = 'Unregelmäßiges Verb';
+    $('#wTag').textContent = dirTag(it);
     $('#wQ').textContent = it.inf + '  (' + it.de + ')';
     specs = [{ lab: 'Past Simple', sol: it.past, alt: true }, { lab: 'Past Participle', sol: it.pp, alt: true }];
   }
