@@ -1,0 +1,739 @@
+<title>E3 Englisch-Trainer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one column, big touch targets. Top tabs switch Auto / Karten / Schreiben / Grammatik.
+   Palette comes from the yellow-and-grey worksheet header: ink blue, signal yellow, soft grey. */
+:root {
+  --bg: #f4f5f9;
+  --surface: #ffffff;
+  --soft: #eaecf5;
+  --ink: #14213d;
+  --muted: #566077;
+  --line: #d6dae7;
+  --accent: #ffd23f;
+  --on-accent: #14213d;
+  --blue: #2f5bea;
+  --good: #167a4d;
+  --good-bg: #dff3e8;
+  --bad: #b8302d;
+  --bad-bg: #fbe4e3;
+  --font-head: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1424; --surface: #172036; --soft: #1f2b47; --ink: #eef1fa; --muted: #9aa4bd; --line: #2b3756;
+    --accent: #ffd23f; --on-accent: #14213d; --blue: #8ea8ff;
+    --good: #4cd08c; --good-bg: #153a2b; --bad: #ff8a87; --bad-bg: #44201f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1424; --surface: #172036; --soft: #1f2b47; --ink: #eef1fa; --muted: #9aa4bd; --line: #2b3756;
+  --accent: #ffd23f; --on-accent: #14213d; --blue: #8ea8ff;
+  --good: #4cd08c; --good-bg: #153a2b; --bad: #ff8a87; --bad-bg: #44201f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.wrap {
+  max-width: 720px; margin: 0 auto;
+  padding-block: 18px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 14px;
+}
+header { display: grid; gap: 4px; }
+h1 { font-family: var(--font-head); font-size: 1.7rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+h2, h3 { font-family: var(--font-head); text-wrap: balance; margin: 0; }
+h2 { font-size: 1.3rem; }
+h3 { font-size: 1.05rem; }
+.sub { color: var(--muted); margin: 0; font-size: .95rem; }
+.countdown { display: inline-block; background: var(--accent); color: var(--on-accent); font-weight: 600; border-radius: 6px; padding: 2px 8px; font-size: .9rem; }
+
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--soft); padding: 4px; border-radius: 12px; }
+.tabs button { border: 0; background: transparent; padding: 10px 4px; border-radius: 9px; font-weight: 600; font-size: .92rem; color: var(--muted); min-height: 44px; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.label { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; font-weight: 500; min-height: 40px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+select, textarea, input[type="text"] { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px; width: 100%; }
+textarea { min-height: 120px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+details summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.btn { border: 0; border-radius: 12px; padding: 12px 18px; font-weight: 600; background: var(--accent); color: var(--on-accent); min-height: 48px; }
+.btn.ghost { background: var(--soft); color: var(--ink); }
+.btn.good { background: var(--good-bg); color: var(--good); }
+.btn.bad { background: var(--bad-bg); color: var(--bad); }
+.note { color: var(--muted); font-size: .9rem; margin: 0; }
+.warn { background: var(--soft); border-left: 4px solid var(--accent); padding: 10px 12px; border-radius: 8px; font-size: .92rem; }
+
+.stage { display: grid; gap: 14px; text-align: center; padding: 22px 14px; }
+.stage .tag { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.big { font-family: var(--font-head); font-weight: 700; font-size: clamp(1.9rem, 8vw, 2.8rem); line-height: 1.15; overflow-wrap: anywhere; }
+.answer { font-family: var(--font-head); font-weight: 700; font-size: clamp(1.5rem, 6.5vw, 2.2rem); color: var(--blue); min-height: 2.6em; overflow-wrap: anywhere; display: grid; align-content: center; gap: 4px; }
+.answer small { font-family: var(--font-body); font-weight: 400; font-size: .95rem; color: var(--muted); }
+.bar { height: 6px; background: var(--soft); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); }
+.controls { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 10px; }
+.controls .btn { min-height: 64px; font-size: 1.15rem; }
+.count { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+
+.flip { cursor: pointer; user-select: none; }
+.write-grid { display: grid; gap: 10px; text-align: left; }
+.res { font-size: .92rem; padding: 6px 10px; border-radius: 8px; }
+.res.ok { background: var(--good-bg); color: var(--good); }
+.res.no { background: var(--bad-bg); color: var(--bad); }
+
+.gnav { display: flex; flex-wrap: wrap; gap: 8px; }
+.gsec { display: grid; gap: 12px; }
+.expl { display: grid; gap: 10px; }
+.expl p { margin: 0; }
+.expl ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 4px; }
+.box { background: var(--soft); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; }
+.box b { font-family: var(--font-head); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .93rem; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+th { font-size: .78rem; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+em.ex { color: var(--blue); font-style: normal; font-weight: 500; }
+.q { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+.q .qt { font-weight: 500; }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.opts button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; min-height: 44px; }
+.opts button.right { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+.opts button.wrong { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+.typed { display: flex; gap: 8px; flex-wrap: wrap; }
+.typed input { flex: 1 1 180px; width: auto; }
+.score { font-family: var(--font-head); font-weight: 700; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>E3 Englisch-Trainer</h1>
+    <p class="sub">Lernziele 1 · Vokabeln, unregelmäßige Verben, Past Simple / Continuous, Fragen, <em>take time to do</em></p>
+    <div><span class="countdown" id="countdown" hidden></span></div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Bereich">
+    <button role="tab" data-tab="cards" aria-selected="true">Karten</button>
+    <button role="tab" data-tab="write" aria-selected="false">Schreiben</button>
+    <button role="tab" data-tab="gram" aria-selected="false">Grammatik</button>
+  </nav>
+
+  <section class="panel" id="settings" aria-label="Lernstoff">
+    <div class="field">
+      <span class="label">Lernstoff</span>
+      <div class="row" id="srcChips">
+        <button class="chip" data-src="vocab" aria-pressed="false">Vokabeln</button>
+        <button class="chip" data-src="verbs" aria-pressed="true">Unregelmäßige Verben</button>
+        <button class="chip" data-src="both" aria-pressed="false">Alles</button>
+      </div>
+    </div>
+    <div class="field" id="unitField">
+      <span class="label">Units (Vokabeln)</span>
+      <div class="row" id="unitChips"></div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label class="label" for="dirSel">Richtung</label>
+        <select id="dirSel">
+          <option value="de-en">Deutsch zuerst, Englisch ist die Antwort</option>
+          <option value="en-de">Englisch zuerst (Verben: Infinitiv, dann Past + Partizip)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="label" for="shuf">Reihenfolge</label>
+        <select id="shuf">
+          <option value="1">Gemischt</option>
+          <option value="0">Wie in der Liste</option>
+        </select>
+      </div>
+    </div>
+        <details id="importBox">
+      <summary>Eigene Vokabeln hinzufügen</summary>
+      <div class="field" style="margin-top:8px">
+        <label class="note" for="vocabIn">Eine Vokabel pro Zeile: <b>englisch = deutsch</b>. Mit einer Zeile wie <b>Unit 2</b> wechselt die Unit. Wird nur auf diesem Gerät gespeichert.</label>
+        <textarea id="vocabIn" spellcheck="false" placeholder="Unit 1&#10;band = Band, Gruppe&#10;Unit 2&#10;..."></textarea>
+        <div class="row">
+          <button class="btn" id="vocabSave" type="button">Speichern</button>
+          <button class="btn ghost" id="vocabClear" type="button">Eigene löschen</button>
+          <span class="note" id="vocabStatus" role="status"></span>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- KARTEN -->
+  <section id="tab-cards" class="gsec">
+    <div class="panel stage flip" id="cardFace" tabindex="0" role="button" aria-label="Karte umdrehen">
+      <div class="tag" id="cardTag">Frage</div>
+      <div class="big" id="cardQ"></div>
+      <div class="answer" id="cardA"></div>
+      <div class="count" id="cardCount"></div>
+    </div>
+    <div class="controls" style="grid-template-columns:1fr 1fr">
+      <button class="btn bad" id="cardNo">Nochmal</button>
+      <button class="btn good" id="cardYes">Kann ich</button>
+    </div>
+    <p class="note">Tippe auf die Karte, um die Antwort zu sehen. "Kann ich" legt die Karte weg, "Nochmal" kommt später wieder.</p>
+  </section>
+
+  <!-- SCHREIBEN -->
+  <section id="tab-write" class="gsec" hidden>
+    <div class="panel stage" style="text-align:left">
+      <div class="tag" id="wTag">Aufgabe</div>
+      <div class="big" id="wQ"></div>
+      <div class="write-grid" id="wFields"></div>
+      <div id="wRes" class="write-grid" aria-live="polite"></div>
+      <div class="count" id="wCount"></div>
+    </div>
+    <div class="controls" style="grid-template-columns:1fr 1fr">
+      <button class="btn ghost" id="wSkip">Überspringen</button>
+      <button class="btn" id="wCheck">Prüfen</button>
+    </div>
+  </section>
+
+  <!-- GRAMMATIK -->
+  <section id="tab-gram" class="gsec" hidden>
+    <div class="gnav" id="gnav"></div>
+    <div id="gbody" class="gsec"></div>
+  </section>
+</div>
+
+<script>
+/* ---------- DATA ---------- */
+// Vokabeln der Units 1 bis 3 (Arbeitsblätter) im Format "englisch = deutsch"
+const VOCAB_TXT = `
+Unit 1
+give something a try = etwas versuchen
+release an album = ein Album veröffentlichen
+maybe = vielleicht
+lyrics = Liedtext
+voice = Stimme
+join a band = bei einer Band mitmachen
+give a performance = eine Vorstellung geben
+be on stage = auf der Bühne sein
+disappointing = enttäuschend
+popular = beliebt
+brave = mutig
+member = Mitglied
+tune = Melodie
+famous = berühmt
+He's going to make it. = Er wird es schaffen.
+You have got what it takes. = Du hast, worauf es ankommt.
+We'll get back to you. = Wir werden auf dich zurückkommen.
+She's on the way up. = Sie ist auf dem Weg nach oben.
+Don't give up! = Gib nicht auf!
+Unit 2
+to buy something = etwas kaufen
+to listen to music = Musik hören
+to try on sunglasses = Sonnenbrillen anprobieren
+to pay the bill = die Rechnung bezahlen
+to drink/eat something = etwas essen/trinken
+to look at something = sich etwas ansehen
+to talk on the mobile = telefonieren
+coincidence = Zufall
+similar = ähnlich
+thief (pl. thieves) = Dieb/Diebin
+to queue (up) = sich anstellen
+to hand something in = abgeben
+to leave somebody alone = jemanden in Ruhe lassen
+to look forward to something = sich auf etwas freuen
+the same date of birth = das gleiche Geburtsdatum
+Unit 3
+to get to the airport = zum Flughafen kommen/fahren
+to take off = abheben (Flugzeug)
+to get on a plane = in ein Flugzeug einsteigen
+to fly back = zurückfliegen
+to get off the plane = aus dem Flugzeug aussteigen
+to suffer from altitude sickness = an Höhenkrankheit leiden
+to land = landen (Flugzeug)
+it takes an hour = es dauert eine Stunde
+to get into a car = in ein Auto einsteigen
+to get out of the car = aus dem Auto aussteigen
+to drive home = nach Hause fahren
+to set off for work = sich auf den Weg zur Arbeit machen
+to work on a blog = an einem Blog arbeiten
+to get close to nature = der Natur nahe kommen
+to sleep in a tent = in einem Zelt schlafen
+to escape the midday heat = der Mittagshitze entkommen
+to cross a river = einen Fluss überqueren
+to meet up with people = sich mit Leuten treffen
+`;
+// Irregular Verbs 1 bis 3 (Arbeitsblätter): Infinitiv | Past Simple | Past Participle | Deutsch
+const VERB_TXT = `
+be|was/were|been|sein
+become|became|become|werden
+begin|began|begun|beginnen
+bend|bent|bent|beugen; biegen
+break|broke|broken|brechen
+bring|brought|brought|bringen
+build|built|built|bauen
+buy|bought|bought|kaufen
+catch|caught|caught|fangen
+choose|chose|chosen|(aus-)wählen
+come|came|come|kommen
+cut|cut|cut|schneiden
+do|did|done|tun, machen
+draw|drew|drawn|zeichnen
+dream|dreamt/dreamed|dreamt/dreamed|träumen
+drink|drank|drunk|trinken
+drive|drove|driven|fahren; treiben
+eat|ate|eaten|essen
+fall|fell|fallen|fallen (einschlafen)
+feel|felt|felt|fühlen
+fight|fought|fought|kämpfen
+find|found|found|finden
+fly|flew|flown|fliegen
+forget|forgot|forgotten|vergessen
+freeze|froze|frozen|einfrieren; erstarren
+get|got|got|bekommen; werden
+get up|got up|got up|aufstehen
+give|gave|given|geben
+go|went|gone|gehen
+hang|hung|hung|hängen
+have|had|had|haben
+hear|heard|heard|hören
+hide|hid|hidden|(sich) verstecken
+hit|hit|hit|schlagen
+hold|held|held|(fest-)halten
+hurt|hurt|hurt|(sich) verletzen, schmerzen
+know|knew|known|wissen; kennen
+learn|learnt/learned|learnt/learned|lernen
+leave|left|left|verlassen
+let|let|let|lassen
+lose|lost|lost|verlieren
+make|made|made|machen
+meet|met|met|treffen
+pay|paid|paid|(be-)zahlen
+put|put|put|setzen; stellen; legen
+read|read|read|lesen
+ride|rode|ridden|reiten; fahren
+ring|rang|rung|läuten
+run|ran|run|laufen
+say|said|said|sagen
+see|saw|seen|sehen
+sell|sold|sold|verkaufen
+send|sent|sent|senden, schicken
+shine|shone|shone|scheinen
+shoot|shot|shot|schießen
+show|showed|shown|zeigen
+sing|sang|sung|singen
+sit|sat|sat|sitzen, sich setzen
+sleep|slept|slept|schlafen
+smell|smelt/smelled|smelt/smelled|riechen
+speak|spoke|spoken|sprechen, sagen
+spend|spent|spent|verbringen; ausgeben
+stand|stood|stood|stehen
+steal|stole|stolen|stehlen
+swim|swam|swum|schwimmen
+take|took|taken|nehmen
+teach|taught|taught|lehren, unterrichten
+tell|told|told|sagen, erzählen
+think|thought|thought|denken
+wake|woke|woken|(auf-)wachen
+win|won|won|gewinnen
+write|wrote|written|schreiben
+`;
+const VERBS = VERB_TXT.trim().split('\n').map(l => {
+  const [inf, past, pp, de] = l.split('|');
+  return { t: 'v', inf, past, pp, de };
+});
+const VOCAB = parseVocab(VOCAB_TXT);
+
+/* ---------- HELPERS ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const norm = s => s.toLowerCase().replace(/[’`´]/g, "'").replace(/\s+/g, ' ').trim().replace(/[.!?]+$/, '');
+const noParen = s => s.replace(/\s*\([^)]*\)/g, '');
+const strip = s => norm(noParen(s)).replace(/^to /, '');
+// alt: Schrägstrich trennt Alternativen (Verbformen wie was/were)
+function matches(input, solution, alt) {
+  const x = strip(input);
+  if (!x) return false;
+  const full = norm(input);
+  const cands = alt ? solution.split(/\s*\/\s*/) : [solution];
+  return cands.some(c => full === norm(c) || x === strip(c));
+}
+
+/* ---------- STATE ---------- */
+const S = Object.assign({ src: 'both', units: [1, 2, 3], dir: 'de-en', shuf: '1' }, load('e3state2', {}));
+function persist() { save('e3state2', S); }
+let userVocab = load('e3vocab', []);
+const allVocab = () => VOCAB.concat(userVocab).map(v => ({ t: 'w', en: v.en, de: v.de, unit: v.unit || 1 }));
+
+function buildDeck() {
+  let items = [];
+  if (S.src !== 'verbs') items = items.concat(allVocab().filter(v => S.units.includes(v.unit)));
+  if (S.src !== 'vocab') items = items.concat(VERBS);
+  return S.shuf === '1' ? shuffle(items) : items;
+}
+
+function view(it) {
+  if (it.t === 'w') {
+    return S.dir === 'de-en' ? { p: it.de, a: it.en, tag: 'Vokabel' } : { p: it.en, a: it.de, tag: 'Vokabel' };
+  }
+  if (S.dir === 'de-en') return { p: it.de, a: `${it.inf} – ${it.past} – ${it.pp}`, tag: 'Unregelmäßiges Verb' };
+  return { p: it.inf, a: `${it.past} – ${it.pp}`, sub: it.de, tag: 'Unregelmäßiges Verb' };
+}
+
+/* ---------- SETTINGS UI ---------- */
+function renderSettings() {
+  $$('#srcChips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === S.src)));
+  const uc = $('#unitChips'); uc.innerHTML = '';
+  [1, 2, 3].forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = 'Unit ' + n; b.type = 'button';
+    b.setAttribute('aria-pressed', String(S.units.includes(n)));
+    b.onclick = () => { S.units = S.units.includes(n) ? S.units.filter(x => x !== n) : S.units.concat(n); persist(); renderSettings(); resetAll(); };
+    uc.appendChild(b);
+  });
+  $('#unitField').hidden = S.src === 'verbs';
+  $('#dirSel').value = S.dir; $('#shuf').value = S.shuf;
+}
+$$('#srcChips .chip').forEach(b => b.onclick = () => { S.src = b.dataset.src; persist(); renderSettings(); resetAll(); });
+$('#dirSel').onchange = e => { S.dir = e.target.value; persist(); resetAll(); };
+$('#shuf').onchange = e => { S.shuf = e.target.value; persist(); resetAll(); };
+
+function parseVocab(txt) {
+  let unit = 1; const out = [];
+  txt.split('\n').forEach(raw => {
+    const l = raw.trim(); if (!l) return;
+    const m = l.match(/^#?\s*unit\s*(\d)\s*$/i);
+    if (m) { unit = +m[1]; return; }
+    const parts = l.split(/\s*=\s*|\t+|\s+[-–]\s+/);
+    if (parts.length >= 2 && parts[0] && parts[1]) out.push({ en: parts[0].trim(), de: parts.slice(1).join(' ').trim(), unit });
+  });
+  return out;
+}
+$('#vocabSave').onclick = () => {
+  const list = parseVocab($('#vocabIn').value);
+  if (!list.length) { $('#vocabStatus').textContent = 'Keine Zeile im Format "englisch = deutsch" gefunden.'; return; }
+  userVocab = userVocab.concat(list); save('e3vocab', userVocab);
+  $('#vocabIn').value = ''; $('#vocabStatus').textContent = list.length + ' Vokabeln gespeichert. Gesamt: ' + userVocab.length + '.';
+  renderSettings(); resetAll();
+};
+let clearArmed = false;
+$('#vocabClear').onclick = () => {
+  if (!clearArmed) { clearArmed = true; $('#vocabStatus').textContent = 'Nochmal tippen, um alle eigenen Vokabeln zu löschen.'; setTimeout(() => { clearArmed = false; }, 4000); return; }
+  userVocab = []; save('e3vocab', userVocab); clearArmed = false; $('#vocabStatus').textContent = 'Gelöscht.'; renderSettings(); resetAll();
+};
+
+/* ---------- TABS ---------- */
+let tab = 'cards';
+function setTab(t) {
+  tab = t;
+  $$('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  ['cards', 'write', 'gram'].forEach(n => { $('#tab-' + n).hidden = n !== t; });
+  $('#settings').hidden = t === 'gram';
+  if (t === 'cards' && !K.started) cardsStart();
+  if (t === 'write' && !W.started) writeStart();
+}
+$$('.tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+
+/* ---------- FLASHCARDS ---------- */
+const K = { started: false, queue: [], total: 0, flipped: false };
+function cardsStart() {
+  K.started = true; K.queue = buildDeck(); K.total = K.queue.length; K.flipped = false; cardsShow();
+}
+function cardsShow() {
+  if (!K.total) { $('#cardQ').textContent = 'Keine Karten'; $('#cardA').textContent = ''; $('#cardTag').textContent = ''; $('#cardCount').textContent = 'Wähle oben Lernstoff aus.'; return; }
+  if (!K.queue.length) { $('#cardTag').textContent = 'Geschafft'; $('#cardQ').textContent = 'Alle Karten gekonnt'; $('#cardA').textContent = ''; $('#cardCount').textContent = 'Tippe hier für eine neue Runde.'; K.done = true; return; }
+  K.done = false;
+  const v = view(K.queue[0]);
+  $('#cardTag').textContent = v.tag;
+  $('#cardQ').textContent = v.p;
+  $('#cardA').innerHTML = K.flipped ? v.a + (v.sub ? `<small>${v.sub}</small>` : '') : '';
+  $('#cardCount').textContent = 'Noch ' + K.queue.length + ' von ' + K.total;
+}
+function cardFlip() { if (K.done) { cardsStart(); return; } if (!K.queue.length) return; K.flipped = !K.flipped; cardsShow(); }
+$('#cardFace').onclick = cardFlip;
+$('#cardFace').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cardFlip(); } };
+$('#cardYes').onclick = () => { if (!K.queue.length) return; K.queue.shift(); K.flipped = false; cardsShow(); };
+$('#cardNo').onclick = () => { if (!K.queue.length) return; K.queue.push(K.queue.shift()); K.flipped = false; cardsShow(); };
+
+/* ---------- WRITING ---------- */
+const W = { started: false, queue: [], total: 0, cur: null, checked: false, fields: [] };
+function writeStart() { W.started = true; W.queue = buildDeck(); W.total = W.queue.length; writeNext(false); }
+function writeNext(skip) {
+  if (skip && W.cur) W.queue.push(W.cur);
+  W.cur = W.queue.shift() || null; W.checked = false;
+  $('#wRes').innerHTML = ''; $('#wFields').innerHTML = ''; W.fields = [];
+  $('#wCheck').textContent = 'Prüfen';
+  if (!W.cur) {
+    $('#wTag').textContent = W.total ? 'Geschafft' : '';
+    $('#wQ').textContent = W.total ? 'Alles richtig geschrieben' : 'Keine Karten';
+    $('#wCount').textContent = W.total ? 'Tippe auf Prüfen für eine neue Runde.' : 'Wähle oben Lernstoff aus.';
+    return;
+  }
+  const it = W.cur;
+  let specs;
+  if (it.t === 'w') {
+    const q = S.dir === 'de-en' ? it.de : it.en;
+    $('#wTag').textContent = 'Vokabel';
+    $('#wQ').textContent = q;
+    specs = [{ lab: S.dir === 'de-en' ? 'Englisch' : 'Deutsch', sol: S.dir === 'de-en' ? it.en : it.de, alt: false }];
+  } else if (S.dir === 'de-en') {
+    $('#wTag').textContent = 'Unregelmäßiges Verb';
+    $('#wQ').textContent = it.de;
+    specs = [{ lab: 'Infinitiv', sol: it.inf, alt: true }, { lab: 'Past Simple', sol: it.past, alt: true }, { lab: 'Past Participle', sol: it.pp, alt: true }];
+  } else {
+    $('#wTag').textContent = 'Unregelmäßiges Verb';
+    $('#wQ').textContent = it.inf + '  (' + it.de + ')';
+    specs = [{ lab: 'Past Simple', sol: it.past, alt: true }, { lab: 'Past Participle', sol: it.pp, alt: true }];
+  }
+  W.specs = specs;
+  specs.forEach((s, i) => {
+    const d = document.createElement('div'); d.className = 'field';
+    d.innerHTML = `<label class="label" for="wf${i}">${s.lab}</label><input type="text" id="wf${i}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
+    $('#wFields').appendChild(d);
+  });
+  W.fields = specs.map((s, i) => $('#wf' + i));
+  W.fields.forEach((f, i) => f.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (i < W.fields.length - 1 && !W.checked) W.fields[i + 1].focus(); else writeCheck(); } });
+  $('#wCount').textContent = 'Noch ' + (W.queue.length + 1) + ' von ' + W.total;
+  W.fields[0].focus();
+}
+function writeCheck() {
+  if (!W.cur) { writeStart(); return; }
+  if (W.checked) { writeNext(false); return; }
+  let all = true; const out = [];
+  W.specs.forEach((s, i) => {
+    const ok = matches(W.fields[i].value, s.sol, s.alt);
+    if (!ok) all = false;
+    out.push(`<div class="res ${ok ? 'ok' : 'no'}">${s.lab}: ${ok ? 'richtig' : 'richtig wäre <b>' + s.sol + '</b>'}</div>`);
+  });
+  $('#wRes').innerHTML = out.join('');
+  W.checked = true;
+  if (!all) W.queue.push(W.cur);
+  $('#wCheck').textContent = 'Weiter';
+}
+$('#wCheck').onclick = writeCheck;
+$('#wSkip').onclick = () => { if (W.cur) writeNext(true); };
+
+function resetAll() {
+  K.started = false; W.started = false;
+  if (tab === 'cards') cardsStart();
+  if (tab === 'write') writeStart();
+}
+
+/* ---------- GRAMMAR ---------- */
+const GRAM = [
+  {
+    id: 'g8', nav: 'Past Simple / Continuous', title: 'Past Simple und Past Continuous',
+    html: `
+<div class="expl">
+  <p><b>Past Simple</b> brauchst du für Dinge, die in der Vergangenheit passiert und abgeschlossen sind. <b>Past Continuous</b> brauchst du für Dinge, die zu einem Zeitpunkt in der Vergangenheit gerade im Gange waren.</p>
+  <div class="tbl"><table>
+    <tr><th></th><th>Past Simple</th><th>Past Continuous</th></tr>
+    <tr><td>Bildung</td><td>Verb + <b>-ed</b> oder unregelmäßige 2. Form</td><td><b>was / were</b> + Verb + <b>-ing</b></td></tr>
+    <tr><td>Aussage</td><td><em class="ex">I played. She went.</em></td><td><em class="ex">I was playing. They were singing.</em></td></tr>
+    <tr><td>Verneinung</td><td><em class="ex">I didn't play.</em> (didn't + Grundform)</td><td><em class="ex">I wasn't playing. They weren't singing.</em></td></tr>
+    <tr><td>Frage</td><td><em class="ex">Did you play?</em> (Did + Grundform)</td><td><em class="ex">Were you playing?</em></td></tr>
+    <tr><td>Signalwörter</td><td>yesterday, last week, in 2020, ... ago</td><td>at 8 o'clock yesterday, while, when</td></tr>
+  </table></div>
+  <div class="box">
+    <b>Beides in einem Satz</b>
+    <span>Eine lange Handlung läuft (Continuous), da passiert etwas Kurzes (Simple):</span>
+    <span><em class="ex">I was walking home when I saw a famous singer.</em></span>
+    <span>Merke: <b>while</b> steht meist mit Past Continuous, <b>when</b> meist mit dem kurzen Past Simple.</span>
+  </div>
+  <div class="box">
+    <b>Zwei Handlungen laufen gleichzeitig</b>
+    <span><em class="ex">While I was reading, my brother was playing guitar.</em></span>
+  </div>
+  <div class="box">
+    <b>Schreibweise bei -ing</b>
+    <span>make → making (e fällt weg) · run → running, sit → sitting (Konsonant verdoppelt) · play → playing</span>
+  </div>
+  <p><b>Tipp zum Entscheiden:</b> Frag dich, ob die Handlung gerade lief (Continuous) oder ob sie einfach passiert ist und fertig war (Simple).</p>
+</div>`,
+    ex: [
+      { q: 'I ___ my homework when the phone rang.', o: ['did', 'was doing', 'were doing'], a: 1, why: 'Die Hausübung war gerade im Gange, dann kam der Anruf.' },
+      { q: 'We ___ to Vienna last summer.', o: ['went', 'were going', 'was going'], a: 0, why: 'Abgeschlossen, mit "last summer": Past Simple. go → went.' },
+      { q: 'While she ___ a book, her brother played games.', o: ['read', 'was reading', 'were reading'], a: 1, why: '"while" + lang andauernde Handlung: Past Continuous.' },
+      { q: 'He ___ the door and walked in.', o: ['opened', 'was opening', 'were opening'], a: 0, why: 'Zwei Handlungen hintereinander: beide Past Simple.' },
+      { q: 'What ___ you doing at 8 o\'clock yesterday?', o: ['was', 'were', 'did'], a: 1, why: 'you braucht "were": Were you doing? / What were you doing?' },
+      { q: 'It ___ when we left the house.', o: ['rained', 'was raining', 'were raining'], a: 1, why: 'Der Regen war im Gange, als wir gingen.' },
+      { q: 'I ___ a famous singer while I ___ through the park.', o: ['saw – was walking', 'was seeing – walked', 'saw – walked'], a: 0, why: 'Kurz: saw. Lang andauernd: was walking.' },
+      { q: 'They ___ (play) football when it started to rain.', ans: ['were playing'], why: 'they → were + playing.' },
+      { q: 'She ___ (buy) a new guitar last week.', ans: ['bought'], why: 'buy → bought (unregelmäßig). "last week" = Past Simple.' },
+      { q: 'The band ___ (not play) when the lights went out.', ans: ["weren't playing", 'were not playing'], why: 'Verneinung Past Continuous: weren\'t + -ing.' }
+    ]
+  },
+  {
+    id: 'g9', nav: 'Fragen und Verneinung', title: 'Frage und Verneinung: Present Simple und Past Simple',
+    html: `
+<div class="expl">
+  <p>Mit <b>do / does / did</b> bildest du Fragen und Verneinungen. Danach steht immer die <b>Grundform</b> des Verbs, ohne -s, ohne -ed und ohne 2. Form.</p>
+  <div class="tbl"><table>
+    <tr><th></th><th>Present Simple</th><th>Past Simple</th></tr>
+    <tr><td>Aussage</td><td><em class="ex">I play. She plays.</em></td><td><em class="ex">I played. She wrote.</em></td></tr>
+    <tr><td>Verneinung</td><td><em class="ex">I don't play. She doesn't play.</em></td><td><em class="ex">I didn't play. She didn't write.</em></td></tr>
+    <tr><td>Frage</td><td><em class="ex">Do you play? Does she play?</em></td><td><em class="ex">Did you play? Did she write?</em></td></tr>
+    <tr><td>Mit Fragewort</td><td><em class="ex">Where does she live?</em></td><td><em class="ex">What did you do yesterday?</em></td></tr>
+  </table></div>
+  <div class="box">
+    <b>Present Simple</b>
+    <span>I / you / we / they → <b>do</b> / <b>don't</b></span>
+    <span>he / she / it → <b>does</b> / <b>doesn't</b> (das -s wandert zu does, das Verb bleibt ohne -s)</span>
+  </div>
+  <div class="box">
+    <b>Häufige Fehler</b>
+    <span>falsch: <em class="ex">Did you went?</em> richtig: <em class="ex">Did you go?</em></span>
+    <span>falsch: <em class="ex">She doesn't likes jazz.</em> richtig: <em class="ex">She doesn't like jazz.</em></span>
+  </div>
+  <div class="box">
+    <b>Ausnahmen</b>
+    <span>Bei <b>be</b> gibt es kein do/did: <em class="ex">Is she a singer? Was he at the concert? I wasn't there.</em></span>
+    <span>Fragt man nach dem Subjekt (wer?), kommt kein did: <em class="ex">Who wrote this song?</em></span>
+  </div>
+</div>`,
+    ex: [
+      { q: '___ you like pop music?', o: ['Do', 'Does', 'Did'], a: 0, why: 'Present Simple mit you: Do.' },
+      { q: 'She ___ like jazz.', o: ["don't", "doesn't", "didn't"], a: 1, why: 'she → doesn\'t. Present Simple.' },
+      { q: '___ he play the guitar?', o: ['Do', 'Does', 'Is'], a: 1, why: 'he → Does.' },
+      { q: '___ you listen to music yesterday?', o: ['Do', 'Did', 'Were'], a: 1, why: '"yesterday" = Past Simple, also Did.' },
+      { q: 'We ___ the band.', o: ["didn't saw", "didn't see", "not saw"], a: 1, why: 'didn\'t + Grundform: didn\'t see.' },
+      { q: 'What time ___ the concert start?', o: ['do', 'does', 'did'], a: 1, why: 'the concert = it → does.' },
+      { q: 'She wrote a song. (Verneinung)', ans: ["she didn't write a song", 'she did not write a song'], why: 'didn\'t + Grundform (write, nicht wrote).' },
+      { q: 'They play in a band. (Frage)', ans: ['do they play in a band'], why: 'Do + they + Grundform.' },
+      { q: 'He sings every day. (Verneinung)', ans: ["he doesn't sing every day", 'he does not sing every day'], why: 'doesn\'t + Grundform ohne -s.' },
+      { q: 'Mia took a photo. (Frage)', ans: ['did mia take a photo'], why: 'Did + Mia + take (Grundform).' }
+    ]
+  },
+  {
+    id: 'g10', nav: 'take time to do', title: 'Dauer angeben mit take time to do',
+    html: `
+<div class="expl">
+  <p>Mit <b>take</b> sagst du, wie lange etwas dauert oder wie lange du für etwas brauchst. Das Subjekt ist <b>it</b>.</p>
+  <div class="box">
+    <b>Bauplan</b>
+    <span><b>It takes</b> (+ Person) + Zeit + <b>to</b> + Verb</span>
+    <span><em class="ex">It takes me ten minutes to walk to school.</em></span>
+    <span><em class="ex">It took us three hours to drive to Salzburg.</em></span>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>Form</th><th>Beispiel</th></tr>
+    <tr><td>Gegenwart</td><td><em class="ex">It takes her an hour to do her homework.</em></td></tr>
+    <tr><td>Vergangenheit</td><td><em class="ex">It took me two hours to write the text.</em></td></tr>
+    <tr><td>Frage</td><td><em class="ex">How long does it take you to get to school?</em></td></tr>
+    <tr><td>Frage (Vergangenheit)</td><td><em class="ex">How long did it take you to read the book?</em></td></tr>
+    <tr><td>Verneinung</td><td><em class="ex">It doesn't take long to make pizza.</em></td></tr>
+  </table></div>
+  <div class="box">
+    <b>Wichtig</b>
+    <span>Nach <b>to</b> steht die Grundform: <em class="ex">to do, to write, to learn</em>.</span>
+    <span>In der Frage und Verneinung steht <b>take</b> in der Grundform: <em class="ex">did it take</em> (nicht took), <em class="ex">doesn't take</em> (nicht takes).</span>
+    <span>Deutsch: "Ich habe zwei Stunden gebraucht, um den Text zu schreiben."</span>
+  </div>
+</div>`,
+    ex: [
+      { q: 'It ___ me two hours to write the text.', o: ['takes', 'took', 'taked'], a: 1, why: 'Vergangenheit: took.' },
+      { q: 'How long ___ it take you to get to school?', o: ['does', 'do', 'did it'], a: 0, why: 'Gegenwart, Subjekt it: does it take.' },
+      { q: 'It ___ (take) us three hours to drive to Salzburg yesterday.', ans: ['took'], why: '"yesterday": took.' },
+      { q: 'It takes five minutes ___ the song.', o: ['learn', 'to learn', 'learning'], a: 1, why: 'Nach der Zeitangabe folgt to + Grundform.' },
+      { q: 'It took me an hour ___ my homework.', o: ['to do', 'doing', 'did'], a: 0, why: 'to do.' },
+      { q: '___ did it take you to write the text?', o: ['How much', 'How long', 'How many'], a: 1, why: 'Fragt man nach der Dauer: How long.' },
+      { q: 'It takes her 20 minutes to walk to school. (Frage mit How long)', ans: ['how long does it take her to walk to school'], why: 'How long + does it take + her + to walk to school.' },
+      { q: 'It ___ him a week to learn the song.', o: ['took', 'take', 'takes'], a: 0, why: 'Vergangenheit: took.' },
+      { q: 'How long did it ___ you to read the book? (take)', ans: ['take'], why: 'Nach did immer die Grundform.' },
+      { q: "It doesn't take long ___ pizza.", o: ['to make', 'making', 'makes'], a: 0, why: 'to + Grundform.' }
+    ]
+  }
+];
+
+function renderGrammar() {
+  const nav = $('#gnav'), body = $('#gbody');
+  GRAM.forEach((g, gi) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.textContent = g.nav;
+    b.setAttribute('aria-pressed', String(gi === 0));
+    b.onclick = () => showGram(gi);
+    nav.appendChild(b);
+    const sec = document.createElement('div');
+    sec.className = 'panel'; sec.id = g.id; sec.hidden = gi !== 0;
+    sec.innerHTML = `<h2>${g.title}</h2>${g.html}<h3>Übungen</h3><div class="gsec exwrap"></div>`;
+    body.appendChild(sec);
+    renderEx(sec.querySelector('.exwrap'), g.ex);
+  });
+}
+function showGram(i) {
+  $$('#gnav .chip').forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+  GRAM.forEach((g, k) => { $('#' + g.id).hidden = k !== i; });
+}
+function renderEx(root, items) {
+  let score = 0, done = 0;
+  const scoreEl = document.createElement('div'); scoreEl.className = 'row';
+  const upd = () => { scoreEl.innerHTML = `<span class="score">${score} von ${items.length} richtig</span><span class="note">${done === items.length ? 'Fertig.' : done + ' beantwortet'}</span>`; };
+  const reset = document.createElement('button'); reset.className = 'btn ghost'; reset.type = 'button'; reset.textContent = 'Neu starten';
+  const list = document.createElement('div'); list.className = 'gsec';
+  function build() {
+    score = 0; done = 0; list.innerHTML = ''; upd();
+    items.forEach((it, i) => {
+      const card = document.createElement('div'); card.className = 'q';
+      const qt = document.createElement('div'); qt.className = 'qt'; qt.textContent = (i + 1) + '. ' + it.q; card.appendChild(qt);
+      const fb = document.createElement('div'); fb.className = 'res'; fb.hidden = true; fb.setAttribute('aria-live', 'polite');
+      let answered = false;
+      const finish = ok => {
+        if (answered) return; answered = true; done++; if (ok) score++;
+        fb.hidden = false; fb.className = 'res ' + (ok ? 'ok' : 'no');
+        const sol = it.o ? it.o[it.a] : it.ans[0];
+        fb.innerHTML = (ok ? 'Richtig. ' : 'Nicht ganz. Richtig ist: <b>' + sol + '</b>. ') + (it.why || '');
+        upd();
+      };
+      if (it.o) {
+        const o = document.createElement('div'); o.className = 'opts';
+        it.o.forEach((txt, k) => {
+          const b = document.createElement('button'); b.type = 'button'; b.textContent = txt;
+          b.onclick = () => {
+            if (answered) return;
+            const ok = k === it.a; b.classList.add(ok ? 'right' : 'wrong');
+            if (!ok) o.children[it.a].classList.add('right');
+            finish(ok);
+          };
+          o.appendChild(b);
+        });
+        card.appendChild(o);
+      } else {
+        const t = document.createElement('div'); t.className = 'typed';
+        const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'ex-' + root.parentNode.id + '-' + i;
+        inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false; inp.setAttribute('aria-label', 'Antwort ' + (i + 1));
+        const go = document.createElement('button'); go.type = 'button'; go.className = 'btn'; go.textContent = 'Prüfen';
+        const check = () => { if (answered || !inp.value.trim()) return; const ok = it.ans.some(a => norm(a) === norm(inp.value).replace(/[.?!]$/, '')); inp.disabled = true; finish(ok); };
+        go.onclick = check; inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); check(); } };
+        t.appendChild(inp); t.appendChild(go); card.appendChild(t);
+      }
+      card.appendChild(fb); list.appendChild(card);
+    });
+  }
+  reset.onclick = build;
+  root.appendChild(scoreEl); root.appendChild(list); root.appendChild(reset);
+  build();
+}
+
+/* ---------- COUNTDOWN ---------- */
+(function () {
+  const t = new Date(2026, 10, 18), n = new Date(); n.setHours(0, 0, 0, 0);
+  const d = Math.round((t - n) / 86400000), el = $('#countdown');
+  if (d < 0) return;
+  el.hidden = false;
+  el.textContent = d === 0 ? 'E-SA ist heute' : d === 1 ? 'E-SA morgen (Mi, 18.11.)' : 'Noch ' + d + ' Tage bis zur E-SA (Mi, 18.11.)';
+})();
+
+/* ---------- INIT ---------- */
+renderSettings(); renderGrammar(); cardsStart();
+</script>
