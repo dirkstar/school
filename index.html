@@ -64,7 +64,8 @@ h3 { font-size: 1.25rem; }
 .countdown { display: inline-block; background: var(--accent); color: var(--on-accent); font-weight: 600; border-radius: 6px; padding: 2px 8px; font-size: .9rem; }
 
 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--soft); padding: 4px; border-radius: 12px; }
-.tabs button { border: 0; background: transparent; padding: 12px 4px; border-radius: 9px; font-weight: 600; font-size: 1.1rem; color: var(--muted); min-height: 56px; }
+.tabs.two { grid-template-columns: repeat(2, 1fr); }
+.tabs button { border: 0; background: transparent; padding: 12px 4px; border-radius: 9px; font-weight: 600; font-size: 1.05rem; color: var(--muted); min-height: 56px; }
 .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 16px; }
@@ -130,17 +131,20 @@ em.ex { color: var(--blue); font-style: normal; font-weight: 500; }
 
 <div class="wrap">
   <header>
-    <h1>E3 Englisch-Trainer</h1>
-    <p class="sub">Lernziele 1 · Vokabeln, unregelmäßige Verben, Past Simple / Continuous, Fragen, <em>take time to do</em></p>
+    <h1>Englisch</h1>
     <div><span class="countdown" id="countdown" hidden></span></div>
   </header>
 
-  <nav class="tabs" role="tablist" aria-label="Bereich">
-    <button role="tab" data-tab="cards" aria-selected="true">Karten</button>
-    <button role="tab" data-tab="write" aria-selected="false">Schreiben</button>
+  <nav class="tabs" id="mainTabs" role="tablist" aria-label="Bereich">
+    <button role="tab" data-tab="vocab" aria-selected="true">Vokabeln</button>
+    <button role="tab" data-tab="verbs" aria-selected="false">Irregular verbs</button>
     <button role="tab" data-tab="gram" aria-selected="false">Grammatik</button>
   </nav>
 
+  <nav class="tabs two" id="modeNav" aria-label="Übungsart">
+    <button data-mode="cards" aria-selected="true">Karten</button>
+    <button data-mode="write" aria-selected="false">Schreiben</button>
+  </nav>
 
   <!-- KARTEN -->
   <section id="tab-cards" class="gsec">
@@ -178,37 +182,35 @@ em.ex { color: var(--blue); font-style: normal; font-weight: 500; }
     <div id="gbody" class="gsec"></div>
   </section>
 
-  <section class="panel" id="settings" aria-label="Lernstoff">
+  <section class="panel" id="settings" aria-label="Einstellungen">
     <h2>Einstellungen</h2>
-    <div class="field">
-      <span class="label">Lernstoff</span>
-      <div class="row" id="srcChips">
-        <button class="chip" data-src="vocab" aria-pressed="false">Vokabeln</button>
-        <button class="chip" data-src="verbs" aria-pressed="true">Unregelmäßige Verben</button>
-      </div>
-    </div>
     <div class="field" id="unitField">
-      <span class="label">Units (Vokabeln)</span>
+      <span class="label">Units</span>
       <div class="row" id="unitChips"></div>
     </div>
-    <div class="grid2">
-      <div class="field">
-        <label class="label" for="dirSel">Richtung</label>
-        <select id="dirSel">
-          <option value="de-en"></option>
-          <option value="en-de"></option>
-          <option value="rand">Zufällig</option>
-        </select>
-      </div>
-      <div class="field">
-        <label class="label" for="shuf">Reihenfolge</label>
-        <select id="shuf">
-          <option value="1">Gemischt</option>
-          <option value="0">Wie in der Liste</option>
-        </select>
-      </div>
+    <div class="field">
+      <label class="label" for="dirSel">Richtung</label>
+      <select id="dirSel">
+        <option value="de-en"></option>
+        <option value="en-de"></option>
+        <option value="rand">Zufällig</option>
+      </select>
     </div>
-      </section>
+    <div class="field">
+      <label class="label" for="shuf">Reihenfolge</label>
+      <select id="shuf">
+        <option value="1">Gemischt</option>
+        <option value="0">Wie in der Liste</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="panel" id="progress" aria-label="Fortschritt">
+    <h2>Fortschritt</h2>
+    <p class="note">Karten, die du als "Kann ich" markierst oder im Schreiben richtig beantwortest, werden gemerkt und nicht mehr gezeigt. Hier setzt du alles für Vokabeln und Verben zurück.</p>
+    <button class="btn bad" id="resetBtn" type="button">Fortschritt zurücksetzen</button>
+    <p class="note" id="progMsg" role="status"></p>
+  </section>
 </div>
 
 <script>
@@ -371,15 +373,23 @@ function matches(input, solution, alt) {
 }
 
 /* ---------- STATE ---------- */
-const S = Object.assign({ src: 'vocab', units: [1, 2, 3], dir: 'de-en', shuf: '1' }, load('e3state3', {}));
-if (S.src !== 'verbs') S.src = 'vocab';
-function persist() { save('e3state3', S); }
+const S = Object.assign({ tab: 'vocab', mode: 'cards', units: [1, 2, 3], dir: 'de-en', shuf: '1' }, load('e3state4', {}));
+if (!['vocab', 'verbs', 'gram'].includes(S.tab)) S.tab = 'vocab';
+if (!['cards', 'write'].includes(S.mode)) S.mode = 'cards';
+function persist() { save('e3state4', S); }
+const src = () => S.tab === 'verbs' ? 'verbs' : 'vocab';
+const KN = load('e3known', {});
+const known = { c: new Set(KN.c || []), w: new Set(KN.w || []) };
+function saveKnown() { save('e3known', { c: Array.from(known.c), w: Array.from(known.w) }); }
+const keyOf = it => it.t === 'w' ? 'w:' + it.en : 'v:' + it.inf;
 const allVocab = () => VOCAB.map(v => ({ t: 'w', en: v.en, de: v.de, unit: v.unit || 1 }));
 
-function buildDeck() {
-  let items = S.src === 'verbs' ? VERBS.slice() : allVocab().filter(v => S.units.includes(v.unit));
-  items = items.map(it => Object.assign({}, it, { d: S.dir === 'rand' ? (Math.random() < 0.5 ? 'de-en' : 'en-de') : S.dir }));
-  return S.shuf === '1' ? shuffle(items) : items;
+function buildDeck(kind) {
+  let items = src() === 'verbs' ? VERBS.slice() : allVocab().filter(v => S.units.includes(v.unit));
+  const total = items.length;
+  items = items.filter(it => !known[kind].has(keyOf(it)))
+    .map(it => Object.assign({}, it, { d: S.dir === 'rand' ? (Math.random() < 0.5 ? 'de-en' : 'en-de') : S.dir }));
+  return { deck: S.shuf === '1' ? shuffle(items) : items, total };
 }
 
 function dirTag(it) {
@@ -393,27 +403,6 @@ function view(it) {
   return { p: it.inf, a: `${it.past} – ${it.pp}`, sub: it.de, tag };
 }
 
-/* ---------- SETTINGS UI ---------- */
-function renderSettings() {
-  $$('#srcChips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === S.src)));
-  const uc = $('#unitChips'); uc.innerHTML = '';
-  [1, 2, 3].forEach(n => {
-    const b = document.createElement('button');
-    b.className = 'chip'; b.textContent = 'Unit ' + n; b.type = 'button';
-    b.setAttribute('aria-pressed', String(S.units.includes(n)));
-    b.onclick = () => { S.units = S.units.includes(n) ? S.units.filter(x => x !== n) : S.units.concat(n); persist(); renderSettings(); resetAll(); };
-    uc.appendChild(b);
-  });
-  $('#unitField').hidden = S.src === 'verbs';
-  const o = $('#dirSel').options;
-  o[0].textContent = S.src === 'verbs' ? 'Deutsch → alle drei Formen' : 'Deutsch → Englisch';
-  o[1].textContent = S.src === 'verbs' ? 'Infinitiv → Past Simple + Participle' : 'Englisch → Deutsch';
-  $('#dirSel').value = S.dir; $('#shuf').value = S.shuf;
-}
-$$('#srcChips .chip').forEach(b => b.onclick = () => { S.src = b.dataset.src; persist(); renderSettings(); resetAll(); });
-$('#dirSel').onchange = e => { S.dir = e.target.value; persist(); resetAll(); };
-$('#shuf').onchange = e => { S.shuf = e.target.value; persist(); resetAll(); };
-
 function parseVocab(txt) {
   let unit = 1; const out = [];
   txt.split('\n').forEach(raw => {
@@ -426,26 +415,67 @@ function parseVocab(txt) {
   return out;
 }
 
-/* ---------- TABS ---------- */
-let tab = 'cards';
-function setTab(t) {
-  tab = t;
-  $$('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
-  ['cards', 'write', 'gram'].forEach(n => { $('#tab-' + n).hidden = n !== t; });
-  $('#settings').hidden = t === 'gram';
-  if (t === 'cards' && !K.started) cardsStart();
-  if (t === 'write' && !W.started) writeStart();
+/* ---------- SETTINGS + NAVIGATION ---------- */
+function renderSettings() {
+  const uc = $('#unitChips'); uc.innerHTML = '';
+  [1, 2, 3].forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = 'Unit ' + n; b.type = 'button';
+    b.setAttribute('aria-pressed', String(S.units.includes(n)));
+    b.onclick = () => { S.units = S.units.includes(n) ? S.units.filter(x => x !== n) : S.units.concat(n); persist(); resetAll(); };
+    uc.appendChild(b);
+  });
+  $('#unitField').hidden = src() === 'verbs';
+  const o = $('#dirSel').options;
+  o[0].textContent = src() === 'verbs' ? 'Deutsch → alle drei Formen' : 'Deutsch → Englisch';
+  o[1].textContent = src() === 'verbs' ? 'Infinitiv → Past Simple + Participle' : 'Englisch → Deutsch';
+  $('#dirSel').value = S.dir; $('#shuf').value = S.shuf;
 }
-$$('.tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+$('#dirSel').onchange = e => { S.dir = e.target.value; persist(); resetAll(); };
+$('#shuf').onchange = e => { S.shuf = e.target.value; persist(); resetAll(); };
+
+const K = { started: false, queue: [], total: 0, flipped: false, done: false };
+const W = { started: false, queue: [], total: 0, cur: null, checked: false, fields: [], specs: [] };
+
+function setView() {
+  $$('#mainTabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === S.tab)));
+  $$('#modeNav button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === S.mode)));
+  const g = S.tab === 'gram';
+  $('#modeNav').hidden = g; $('#settings').hidden = g; $('#progress').hidden = g;
+  $('#tab-cards').hidden = g || S.mode !== 'cards';
+  $('#tab-write').hidden = g || S.mode !== 'write';
+  $('#tab-gram').hidden = !g;
+  if (g) return;
+  renderSettings();
+  if (S.mode === 'cards' && !K.started) cardsStart();
+  if (S.mode === 'write' && !W.started) writeStart();
+}
+function resetAll() { K.started = false; W.started = false; setView(); }
+$$('#mainTabs button').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; persist(); K.started = false; W.started = false; setView(); });
+$$('#modeNav button').forEach(b => b.onclick = () => { S.mode = b.dataset.mode; persist(); setView(); });
+
+let armed = false, armT;
+$('#resetBtn').onclick = () => {
+  const b = $('#resetBtn');
+  if (!armed) {
+    armed = true; b.textContent = 'Wirklich zurücksetzen? Nochmal tippen';
+    armT = setTimeout(() => { armed = false; b.textContent = 'Fortschritt zurücksetzen'; }, 5000);
+    return;
+  }
+  clearTimeout(armT); armed = false; b.textContent = 'Fortschritt zurücksetzen';
+  known.c.clear(); known.w.clear(); saveKnown();
+  $('#progMsg').textContent = 'Fortschritt zurückgesetzt.';
+  resetAll();
+};
 
 /* ---------- FLASHCARDS ---------- */
-const K = { started: false, queue: [], total: 0, flipped: false };
 function cardsStart() {
-  K.started = true; K.queue = buildDeck(); K.total = K.queue.length; K.flipped = false; cardsShow();
+  const r = buildDeck('c');
+  K.started = true; K.queue = r.deck; K.total = r.total; K.flipped = false; cardsShow();
 }
 function cardsShow() {
-  if (!K.total) { $('#cardQ').textContent = 'Keine Karten'; $('#cardA').textContent = ''; $('#cardTag').textContent = ''; $('#cardCount').textContent = 'Wähle oben Lernstoff aus.'; return; }
-  if (!K.queue.length) { $('#cardTag').textContent = 'Geschafft'; $('#cardQ').textContent = 'Alle Karten gekonnt'; $('#cardA').textContent = ''; $('#cardCount').textContent = 'Tippe hier für eine neue Runde.'; K.done = true; return; }
+  if (!K.total) { $('#cardQ').textContent = 'Keine Karten'; $('#cardA').textContent = ''; $('#cardTag').textContent = ''; $('#cardCount').textContent = 'Wähle unten mindestens eine Unit aus.'; K.done = true; return; }
+  if (!K.queue.length) { $('#cardTag').textContent = 'Geschafft'; $('#cardQ').textContent = 'Alle Karten gekonnt'; $('#cardA').textContent = ''; $('#cardCount').textContent = 'Unten kannst du den Fortschritt zurücksetzen.'; K.done = true; return; }
   K.done = false;
   const v = view(K.queue[0]);
   $('#cardTag').textContent = v.tag;
@@ -453,15 +483,14 @@ function cardsShow() {
   $('#cardA').innerHTML = K.flipped ? v.a + (v.sub ? `<small>${v.sub}</small>` : '') : '';
   $('#cardCount').textContent = 'Noch ' + K.queue.length + ' von ' + K.total;
 }
-function cardFlip() { if (K.done) { cardsStart(); return; } if (!K.queue.length) return; K.flipped = !K.flipped; cardsShow(); }
+function cardFlip() { if (K.done) return; K.flipped = !K.flipped; cardsShow(); }
 $('#cardFace').onclick = cardFlip;
 $('#cardFace').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cardFlip(); } };
-$('#cardYes').onclick = () => { if (!K.queue.length) return; K.queue.shift(); K.flipped = false; cardsShow(); };
+$('#cardYes').onclick = () => { if (!K.queue.length) return; known.c.add(keyOf(K.queue.shift())); saveKnown(); K.flipped = false; cardsShow(); };
 $('#cardNo').onclick = () => { if (!K.queue.length) return; K.queue.push(K.queue.shift()); K.flipped = false; cardsShow(); };
 
 /* ---------- WRITING ---------- */
-const W = { started: false, queue: [], total: 0, cur: null, checked: false, fields: [] };
-function writeStart() { W.started = true; W.queue = buildDeck(); W.total = W.queue.length; writeNext(false); }
+function writeStart() { const r = buildDeck('w'); W.started = true; W.queue = r.deck; W.total = r.total; writeNext(false); }
 function writeNext(skip) {
   if (skip && W.cur) W.queue.push(W.cur);
   W.cur = W.queue.shift() || null; W.checked = false;
@@ -470,7 +499,7 @@ function writeNext(skip) {
   if (!W.cur) {
     $('#wTag').textContent = W.total ? 'Geschafft' : '';
     $('#wQ').textContent = W.total ? 'Alles richtig geschrieben' : 'Keine Karten';
-    $('#wCount').textContent = W.total ? 'Tippe auf Prüfen für eine neue Runde.' : 'Wähle oben Lernstoff aus.';
+    $('#wCount').textContent = W.total ? 'Unten kannst du den Fortschritt zurücksetzen.' : 'Wähle unten mindestens eine Unit aus.';
     return;
   }
   const it = W.cur;
@@ -490,38 +519,32 @@ function writeNext(skip) {
     specs = [{ lab: 'Past Simple', sol: it.past, alt: true }, { lab: 'Past Participle', sol: it.pp, alt: true }];
   }
   W.specs = specs;
-  specs.forEach((s, i) => {
+  specs.forEach((sp, i) => {
     const d = document.createElement('div'); d.className = 'field';
-    d.innerHTML = `<label class="label" for="wf${i}">${s.lab}</label><input type="text" id="wf${i}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
+    d.innerHTML = `<label class="label" for="wf${i}">${sp.lab}</label><input type="text" id="wf${i}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
     $('#wFields').appendChild(d);
   });
-  W.fields = specs.map((s, i) => $('#wf' + i));
+  W.fields = specs.map((sp, i) => $('#wf' + i));
   W.fields.forEach((f, i) => f.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (i < W.fields.length - 1 && !W.checked) W.fields[i + 1].focus(); else writeCheck(); } });
   $('#wCount').textContent = 'Noch ' + (W.queue.length + 1) + ' von ' + W.total;
   W.fields[0].focus();
 }
 function writeCheck() {
-  if (!W.cur) { writeStart(); return; }
+  if (!W.cur) return;
   if (W.checked) { writeNext(false); return; }
   let all = true; const out = [];
-  W.specs.forEach((s, i) => {
-    const ok = matches(W.fields[i].value, s.sol, s.alt);
+  W.specs.forEach((sp, i) => {
+    const ok = matches(W.fields[i].value, sp.sol, sp.alt);
     if (!ok) all = false;
-    out.push(`<div class="res ${ok ? 'ok' : 'no'}">${s.lab}: ${ok ? 'richtig' : 'richtig wäre <b>' + s.sol + '</b>'}</div>`);
+    out.push(`<div class="res ${ok ? 'ok' : 'no'}">${sp.lab}: ${ok ? 'richtig' : 'richtig wäre <b>' + sp.sol + '</b>'}</div>`);
   });
   $('#wRes').innerHTML = out.join('');
   W.checked = true;
-  if (!all) W.queue.push(W.cur);
+  if (all) { known.w.add(keyOf(W.cur)); saveKnown(); } else W.queue.push(W.cur);
   $('#wCheck').textContent = 'Weiter';
 }
 $('#wCheck').onclick = writeCheck;
 $('#wSkip').onclick = () => { if (W.cur) writeNext(true); };
-
-function resetAll() {
-  K.started = false; W.started = false;
-  if (tab === 'cards') cardsStart();
-  if (tab === 'write') writeStart();
-}
 
 /* ---------- GRAMMAR ---------- */
 const GRAM = [
@@ -728,7 +751,7 @@ function renderEx(root, items) {
 })();
 
 /* ---------- INIT ---------- */
-renderSettings(); renderGrammar(); cardsStart();
+renderGrammar(); setView();
 </script>
 
 </body>
